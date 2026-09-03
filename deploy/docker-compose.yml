@@ -1,0 +1,25 @@
+services:
+  b1:
+    build: { context: .., dockerfile: deploy/Dockerfile }
+    entrypoint: ["/usr/local/bin/backend", "-addr", ":9001", "-name", "b1"]
+  b2:
+    build: { context: .., dockerfile: deploy/Dockerfile }
+    entrypoint: ["/usr/local/bin/backend", "-addr", ":9002", "-name", "b2"]
+  b3:
+    build: { context: .., dockerfile: deploy/Dockerfile }
+    entrypoint: ["/usr/local/bin/backend", "-addr", ":9003", "-name", "b3"]
+
+  meshcp:
+    build: { context: .., dockerfile: deploy/Dockerfile }
+    entrypoint: ["/usr/local/bin/meshcp", "-addr", ":8081", "-config", "/etc/meshd/config.docker.json"]
+
+  meshd:
+    build: { context: .., dockerfile: deploy/Dockerfile }
+    command:
+      - "-addr=:8080"
+      - "-admin-addr=:9901"
+      - "-control-plane=http://meshcp:8081/v1/config/stream"
+    ports: ["8080:8080", "9901:9901"]
+    depends_on: [meshcp, b1, b2, b3]
+    # SIGTERM starts the drain sequence; give it room to finish.
+    stop_grace_period: 30s

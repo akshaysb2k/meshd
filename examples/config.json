@@ -1,0 +1,83 @@
+{
+  "version": "v1",
+  "routes": [
+    {
+      "name": "api",
+      "match": { "path_prefix": "/api/" },
+      "cluster": "api",
+      "timeout": "5s",
+      "prefix_rewrite": "/",
+      "hash_on": "X-Session-Id",
+      "retry": {
+        "on": ["5xx", "connect-failure", "reset"],
+        "max_attempts": 3,
+        "per_try_timeout": "1s",
+        "base_backoff": "10ms",
+        "max_backoff": "150ms",
+        "budget_percent": 20,
+        "min_retry_concurrency": 3
+      },
+      "hedge": {
+        "delay": "150ms",
+        "max_hedges": 1,
+        "budget_percent": 10
+      }
+    },
+    {
+      "name": "default",
+      "match": { "path_prefix": "/" },
+      "cluster": "api",
+      "timeout": "5s",
+      "retry": {
+        "on": ["5xx", "connect-failure"],
+        "max_attempts": 3,
+        "per_try_timeout": "1s",
+        "base_backoff": "10ms",
+        "max_backoff": "150ms",
+        "budget_percent": 20,
+        "min_retry_concurrency": 3
+      }
+    }
+  ],
+  "clusters": [
+    {
+      "name": "api",
+      "policy": "least_request",
+      "endpoints": [
+        "http://127.0.0.1:9001",
+        "http://127.0.0.1:9002",
+        "http://127.0.0.1:9003"
+      ],
+      "panic_threshold": 0.5,
+      "slow_start": "10s",
+      "slow_start_min_weight": 0.05,
+      "ring_replicas": 100,
+      "max_idle_conns_per_host": 128,
+      "connect_timeout": "1s",
+      "drain_timeout": "15s",
+      "health_check": {
+        "path": "/healthz",
+        "interval": "1s",
+        "timeout": "500ms",
+        "healthy_threshold": 2,
+        "unhealthy_threshold": 3,
+        "jitter_percent": 20,
+        "expected_status": 200
+      },
+      "outlier_detection": {
+        "consecutive_5xx": 3,
+        "consecutive_gateway_errors": 3,
+        "interval": "250ms",
+        "base_ejection_time": "3s",
+        "max_ejection_time": "60s",
+        "max_ejection_percent": 50
+      },
+      "circuit_breaker": {
+        "max_connections": 1024,
+        "max_pending_requests": 2048,
+        "max_requests": 2048,
+        "max_retries": 64
+      }
+    }
+  ]
+}
